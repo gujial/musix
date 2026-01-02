@@ -1,6 +1,6 @@
 """
 Bilibili 视频服务模块
-处理 Bilibili 视频的音轨获取
+处理 Bilibili 视频信息获取
 """
 import os
 from typing import Any
