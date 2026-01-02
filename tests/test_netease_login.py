@@ -9,21 +9,17 @@ from pathlib import Path
 # 添加父目录到系统路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from netease_service import (
-    login_by_phone,
-    login_by_phone_with_captcha,
-    send_login_captcha,
-    login_by_email,
-    check_login_status,
-    logout,
-    get_user_playlist
-)
+from netease_service import NeteaseService
+
+
+# 创建全局服务实例
+service = NeteaseService(auto_login=True)
 
 
 async def test_login_status():
     """测试登录状态"""
     print("\n检查当前登录状态...")
-    status = await check_login_status()
+    status = await service.check_login_status()
     
     if status.get("is_logged_in"):
         print(f"✓ 已登录")
@@ -59,7 +55,7 @@ async def test_phone_login():
         country_code = int(country_code_input) if country_code_input else 86
         
         print("\n正在登录...")
-        result = await login_by_phone(phone, password, country_code)
+        result = await service.login_by_phone(phone, password, country_code)
         
         if result.get("success"):
             print(f"\n✓ {result.get('message')}")
@@ -76,7 +72,7 @@ async def test_phone_login():
             send = input("\n是否发送验证码到手机? (y/n): ").strip().lower()
             if send == 'y':
                 print("\n正在发送验证码...")
-                send_result = await send_login_captcha(phone, country_code)
+                send_result = await service.send_login_captcha(phone, country_code)
                 
                 if send_result.get("success"):
                     print(f"✓ {send_result.get('message')}")
@@ -85,7 +81,7 @@ async def test_phone_login():
                     captcha = input("\n请输入收到的验证码: ").strip()
                     if captcha:
                         print("\n正在使用验证码登录...")
-                        captcha_result = await login_by_phone_with_captcha(
+                        captcha_result = await service.login_by_phone_with_captcha(
                             phone, captcha, country_code
                         )
                         
@@ -138,7 +134,7 @@ async def test_email_login():
             return False
         
         print("\n正在登录...")
-        result = await login_by_email(email, password)
+        result = await service.login_by_email(email, password)
         
         if result.get("success"):
             print(f"\n✓ {result.get('message')}")
@@ -175,7 +171,7 @@ async def test_captcha_login():
         
         # 发送验证码
         print("\n正在发送验证码...")
-        send_result = await send_login_captcha(phone, country_code)
+        send_result = await service.send_login_captcha(phone, country_code)
         
         if not send_result.get("success"):
             print(f"✗ {send_result.get('message')}")
@@ -192,7 +188,7 @@ async def test_captcha_login():
         
         # 使用验证码登录
         print("\n正在登录...")
-        result = await login_by_phone_with_captcha(phone, captcha, country_code)
+        result = await service.login_by_phone_with_captcha(phone, captcha, country_code)
         
         if result.get("success"):
             print(f"\n✓ {result.get('message')}")
@@ -225,7 +221,7 @@ async def test_user_playlist():
         return
     
     print("\n正在获取歌单...")
-    result = await get_user_playlist()
+    result = await service.get_user_playlist()
     
     if result.get("error"):
         print(f"✗ 错误: {result.get('error')}")
@@ -249,13 +245,56 @@ async def test_user_playlist():
             print(f"\n  ... 还有 {count - 10} 个歌单")
 
 
+async def test_cookie_login():
+    """测试Cookie登录"""
+    print("\n" + "=" * 50)
+    print("Cookie登录测试")
+    print("=" * 50)
+    
+    try:
+        print("\n提示: 将从环境变量NETEASE_MUSIC_U读取Cookie")
+        print("或者手动输入MUSIC_U cookie值")
+        
+        use_env = input("\n是否使用环境变量中的Cookie? (y/n): ").strip().lower()
+        
+        if use_env == 'y':
+            print("\n正在使用环境变量登录...")
+            result = await service.login_by_cookie()
+        else:
+            music_u = input("\n请输入MUSIC_U cookie: ").strip()
+            if not music_u:
+                print("Cookie不能为空")
+                return False
+            
+            print("\n正在登录...")
+            result = await service.login_by_cookie(music_u)
+        
+        if result.get("success"):
+            print(f"\n✓ {result.get('message')}")
+            print(f"  用户ID: {result.get('user_id')}")
+            print(f"  昵称: {result.get('nickname')}")
+            print(f"  VIP类型: {result.get('vip_type', 0)}")
+            return True
+        else:
+            print(f"\n✗ {result.get('message')}")
+            print(f"  错误码: {result.get('code')}")
+            return False
+            
+    except KeyboardInterrupt:
+        print("\n\n登录已取消")
+        return False
+    except Exception as e:
+        print(f"\n✗ 登录异常: {e}")
+        return False
+
+
 async def test_logout():
     """测试登出"""
     print("\n" + "=" * 50)
     print("登出测试")
     print("=" * 50)
     
-    result = await logout()
+    result = await service.logout()
     
     if result.get("success"):
         print(f"\n✓ {result.get('message')}")
@@ -275,15 +314,16 @@ async def main():
     while True:
         print("\n请选择测试选项:")
         print("1. 检查登录状态")
-        print("2. 手机号+密码登录")
-        print("3. 邮箱登录")
-        print("4. 手机号+验证码登录")
-        print("5. 获取用户歌单")
-        print("6. 登出")
+        print("2. Cookie登录（从环境变量）")
+        print("3. 手机号+密码登录")
+        print("4. 邮箱登录")
+        print("5. 手机号+验证码登录")
+        print("6. 获取用户歌单")
+        print("7. 登出")
         print("0. 退出")
         
         try:
-            choice = input("\n请输入选项 (0-6): ").strip()
+            choice = input("\n请输入选项 (0-7): ").strip()
             
             if choice == "0":
                 print("\n测试结束")
@@ -291,14 +331,16 @@ async def main():
             elif choice == "1":
                 await test_login_status()
             elif choice == "2":
-                await test_phone_login()
+                await test_cookie_login()
             elif choice == "3":
-                await test_email_login()
+                await test_phone_login()
             elif choice == "4":
-                await test_captcha_login()
+                await test_email_login()
             elif choice == "5":
-                await test_user_playlist()
+                await test_captcha_login()
             elif choice == "6":
+                await test_user_playlist()
+            elif choice == "7":
                 await test_logout()
             else:
                 print("无效选项，请重新选择")

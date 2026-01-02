@@ -9,7 +9,7 @@ from pathlib import Path
 # 添加父目录到系统路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from netease_service import search_songs, get_netease_audio_info
+from netease_service import NeteaseService
 from bilibili_service import BilibiliService
 
 
@@ -78,23 +78,28 @@ def play_with_ffmpeg(url: str, media_type: str = "audio", duration: int = 30):
         print(f"   开始播放...\n")
         
         # 执行播放
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE
-        )
-        
+        process = None
         try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+            
             process.wait(timeout=duration + 5)
+            print(f"\n   播放完成")
+            
         except subprocess.TimeoutExpired:
-            process.kill()
-        
-        print(f"\n   播放完成")
+            if process:
+                process.kill()
+            print(f"\n   播放完成")
+        except KeyboardInterrupt:
+            print(f"\n   播放已停止")
+            if process:
+                process.kill()
         
     except KeyboardInterrupt:
         print(f"\n   播放已停止")
-        if process:
-            process.kill()
     except Exception as e:
         print(f"   ✗ 播放错误: {e}")
         print(f"   提示: 确保安装了ffmpeg和ffplay")
@@ -120,10 +125,13 @@ async def test_netease_service():
     print("测试网易云音乐服务")
     print("=" * 50)
     
+    # 创建服务实例
+    service = NeteaseService()
+    
     # 测试搜索功能
     print("\n1. 测试搜索歌曲...")
     try:
-        search_result = await search_songs("周杰伦", page=1, page_limit=5)
+        search_result = await service.search_songs("周杰伦", page=1, page_limit=5)
         print(f"   总结果数: {search_result['total_count']}")
         print(f"   当前页: {search_result['current_page']}")
         print(f"   返回歌曲数: {len(search_result['songs'])}")
@@ -138,7 +146,7 @@ async def test_netease_service():
         if search_result['songs']:
             print("\n2. 测试获取音频信息...")
             song_id = search_result['songs'][0]['id']
-            audio_info = await get_netease_audio_info(song_id)
+            audio_info = await service.get_netease_audio_info(song_id)
             print(f"   歌曲名: {audio_info['title']}")
             print(f"   作者: {audio_info['author']}")
             print(f"   专辑: {audio_info['album_name']}")
