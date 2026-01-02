@@ -4,6 +4,11 @@
 import asyncio
 import sys
 import subprocess
+from pathlib import Path
+
+# 添加父目录到系统路径
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from netease_service import search_songs, get_netease_audio_info
 from bilibili_service import BilibiliService
 
