@@ -74,6 +74,7 @@ class BilibiliService(AuthenticatedMediaService):
         # streams[0] 是视频流，streams[1] 是音频流
         video_url = streams[0].url if len(streams) > 0 else None
         audio_url = streams[1].url if len(streams) > 1 else None
+        print(info_data)
         
         return {
             "title": info_data["title"],
@@ -84,6 +85,7 @@ class BilibiliService(AuthenticatedMediaService):
             "stat": info_data["stat"],
             "video_url": video_url,
             "audio_url": audio_url,
+            "duration": info_data["duration"],
             "bvid": bvid,
             "page": page
         }
