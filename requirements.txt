@@ -2,3 +2,8 @@ pyncm
 bilibili-api-python
 python-dotenv
 aiohttp
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart

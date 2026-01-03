@@ -400,37 +400,6 @@ GET /api/v1/netease/playlists/123456789
 
 ---
 
-### 4.5 获取每日推荐
-
-**接口**: `GET /netease/recommendations/daily`
-
-**描述**: 获取每日推荐歌曲（需要登录）
-
-**请求头**:
-```http
-Authorization: Bearer {access_token}
-```
-
-**响应**:
-```json
-{
-  "code": 200,
-  "data": {
-    "items": [
-      {
-        "id": 186016,
-        "name": "稻香",
-        "artists": [{"id": 6452, "name": "周杰伦"}],
-        "album": {...}
-      }
-    ],
-    "count": 30
-  }
-}
-```
-
----
-
 ### 4.6 获取排行榜
 
 **接口**: `GET /netease/toplist/{list_id}`

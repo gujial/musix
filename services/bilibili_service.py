@@ -90,6 +90,26 @@ class BilibiliService(AuthenticatedMediaService):
             "page": page
         }
     
+    async def get_video_pages(self, bvid: str, **kwargs) -> dict:
+        """
+        获取视频所有分P信息
+        
+        Args:
+            bvid: 视频BV号
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 分P信息
+        """
+        v = video.Video(bvid=bvid, credential=self.credential)
+        info = await v.get_info()
+        info_data: dict[str, Any] = info  # type: ignore
+        
+        return {
+            "bvid": bvid,
+            "pages": info_data.get("pages", [])
+        }
+    
     async def check_login_status(self) -> dict:
         """
         检查登录状态

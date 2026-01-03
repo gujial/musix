@@ -333,10 +333,8 @@ class NeteaseService(AuthenticatedMediaService):
             response = apis.user.GetUserPlaylists(user_id=user_id)
             response_data: dict[str, Any] = response  # type: ignore
             
-            playlists = response_data.get("playlist", [])
             return {
-                "playlists": playlists,
-                "count": len(playlists)
+                "playlist": response_data.get("playlist", [])
             }
         except Exception as e:
             return {
@@ -364,30 +362,11 @@ class NeteaseService(AuthenticatedMediaService):
             if response_data.get("code") != 200:
                 return {
                     "error": response_data.get("message", "获取歌单信息失败"),
-                    "code": response_data.get("code")
+                    "code": response_data.get("code"),
+                    "playlist": {}
                 }
             
-            playlist = response_data.get("playlist", {})
-            
-            return {
-                "id": playlist.get("id"),
-                "name": playlist.get("name"),
-                "description": playlist.get("description"),
-                "cover_img_url": playlist.get("coverImgUrl"),
-                "creator": {
-                    "id": playlist.get("creator", {}).get("userId"),
-                    "nickname": playlist.get("creator", {}).get("nickname"),
-                    "avatar_url": playlist.get("creator", {}).get("avatarUrl")
-                },
-                "tracks": playlist.get("tracks", []),
-                "track_ids": playlist.get("trackIds", []),
-                "track_count": playlist.get("trackCount", 0),
-                "play_count": playlist.get("playCount", 0),
-                "subscribed_count": playlist.get("subscribedCount", 0),
-                "create_time": playlist.get("createTime"),
-                "update_time": playlist.get("updateTime"),
-                "tags": playlist.get("tags", [])
-            }
+            return response_data
         except Exception as e:
             return {
                 "error": f"获取歌单详情异常: {str(e)}"
@@ -395,26 +374,19 @@ class NeteaseService(AuthenticatedMediaService):
     
     async def search(self, keywords: str, page: int = 1, **kwargs) -> dict:
         """搜索网易云音乐（实现抽象方法）"""
-        page_limit = kwargs.get('page_limit', 25)
-        offset = page_limit * (page - 1)
+        limit = kwargs.get('limit', 20)
+        offset = kwargs.get('offset', 0)
+        
         response = apis.cloudsearch.GetSearchResult(
             keyword=keywords,
             stype=1,  # 1表示单曲
-            limit=page_limit,
+            limit=limit,
             offset=offset
         )
         
         response_data: dict[str, Any] = response  # type: ignore
-        songs = response_data.get("result", {}).get("songs", [])
-        total_count = response_data.get("result", {}).get("songCount", 0)
         
-        return {
-            "items": songs,  # 统一字段名
-            "songs": songs,  # 保持向后兼容
-            "total_count": total_count,
-            "current_page": page,
-            "page_limit": page_limit
-        }
+        return response_data
     
     async def get_media_info(self, media_id: Any, **kwargs) -> dict:
         """获取网易云音乐的详细信息（实现抽象方法）"""
@@ -436,7 +408,22 @@ class NeteaseService(AuthenticatedMediaService):
             "author": song["ar"][0]["name"],
             "album_name": song["al"]["name"],
             "album_pic": song["al"]["picUrl"],
-            "download_url": data["url"],
+            "download_url": data.get("url") or None,  # VIP歌曲或受限歌曲可能返回None
             "duration": time_str,
-            "song_id": song_id
+            "song_id": song_id,
+            "bitrate": data.get("br")
         }
+    
+    async def send_captcha(self, phone: str, country_code: int = 86, **kwargs) -> dict:
+        """
+        发送验证码（别名方法，调用 send_login_captcha）
+        
+        Args:
+            phone: 手机号
+            country_code: 国家代码
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 发送结果
+        """
+        return await self.send_login_captcha(phone=phone, country_code=country_code, **kwargs)
