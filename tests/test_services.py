@@ -131,7 +131,7 @@ async def test_netease_service():
     # 测试搜索功能
     print("\n1. 测试搜索歌曲...")
     try:
-        search_result = await service.search("周杰伦", page=1, page_limit=5)
+        search_result = await service.search("电棍", page=1, page_limit=5)
         print(f"   总结果数: {search_result['total_count']}")
         print(f"   当前页: {search_result['current_page']}")
         # 支持新的items字段和旧的songs字段
@@ -176,7 +176,7 @@ async def test_bilibili_service():
     # 测试搜索功能
     print("\n1. 测试搜索视频...")
     try:
-        search_result = await service.search("周杰伦", page=1)
+        search_result = await service.search("电棍", page=1)
         print(f"   当前页: {search_result['current_page']}")
         print(f"   总页数: {search_result.get('total_pages', 0)}")
         # 支持新的items字段和旧的videos字段
