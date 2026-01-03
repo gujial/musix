@@ -217,4 +217,20 @@ class BilibiliService(AuthenticatedMediaService):
             "code": -1,
             "message": "Bilibili二维码登录功能待实现"
         }
-
+    
+    async def get_playlist_detail(self, playlist_id: Any, **kwargs) -> dict:
+        """
+        获取Bilibili收藏夹详细信息
+        
+        Args:
+            playlist_id: 收藏夹ID
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 收藏夹详细信息
+        """
+        # TODO: 实现Bilibili获取收藏夹详细信息功能
+        # 需要使用 bilibili_api.favorite 模块
+        return {
+            "error": "Bilibili获取收藏夹详细信息功能待实现"
+        }

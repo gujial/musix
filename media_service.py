@@ -137,6 +137,27 @@ class AuthenticatedMediaService(MediaService):
             "error": "此服务暂不支持获取用户播放列表"
         }
     
+    async def get_playlist_detail(self, playlist_id: Any, **kwargs) -> dict:
+        """
+        获取播放列表详细信息（可选实现）
+        
+        Args:
+            playlist_id: 播放列表ID
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 播放列表详细信息，包含:
+                - id: 播放列表ID
+                - name: 名称
+                - description: 描述
+                - creator: 创建者信息
+                - tracks: 曲目列表
+                - track_count: 曲目数量
+        """
+        return {
+            "error": "此服务暂不支持获取播放列表详细信息"
+        }
+    
     async def get_user_info(self, user_id: Optional[Any] = None, **kwargs) -> dict:
         """
         获取用户详细信息（可选实现）

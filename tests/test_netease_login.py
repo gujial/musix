@@ -245,6 +245,144 @@ async def test_user_playlist():
             print(f"\n  ... 还有 {count - 10} 个歌单")
 
 
+async def test_playlist_detail():
+    """测试获取歌单详细信息"""
+    print("\n" + "=" * 50)
+    print("获取歌单详细信息测试")
+    print("=" * 50)
+    
+    # 先检查登录状态
+    is_logged_in = await test_login_status()
+    if not is_logged_in:
+        print("\n提示: 未登录，将无法获取部分私密歌单")
+    
+    try:
+        # 选择1: 从用户歌单中选择
+        print("\n请选择歌单来源:")
+        print("1. 从我的歌单中选择")
+        print("2. 手动输入歌单ID")
+        
+        choice = input("\n请选择 (1/2): ").strip()
+        
+        playlist_id = None
+        
+        if choice == "1":
+            if not is_logged_in:
+                print("\n需要先登录才能获取我的歌单")
+                return
+            
+            print("\n正在获取歌单列表...")
+            result = await service.get_user_playlists()
+            
+            if result.get("error"):
+                print(f"✗ 错误: {result.get('error')}")
+                return
+            
+            playlists = result.get("playlists", [])
+            if not playlists:
+                print("✗ 没有找到歌单")
+                return
+            
+            # 显示歌单列表
+            print(f"\n找到 {len(playlists)} 个歌单:")
+            for i, playlist in enumerate(playlists[:20], 1):
+                name = playlist.get("name", "未知歌单")
+                playlist_id_item = playlist.get("id")
+                track_count = playlist.get("trackCount", 0)
+                print(f"  {i}. {name} (ID: {playlist_id_item}, 歌曲数: {track_count})")
+            
+            if len(playlists) > 20:
+                print(f"\n  ... 还有 {len(playlists) - 20} 个歌单")
+            
+            # 选择歌单
+            selection = input("\n请输入歌单编号 (1-20): ").strip()
+            try:
+                index = int(selection) - 1
+                if 0 <= index < min(20, len(playlists)):
+                    playlist_id = playlists[index].get("id")
+                else:
+                    print("无效的编号")
+                    return
+            except ValueError:
+                print("请输入有效的数字")
+                return
+        
+        elif choice == "2":
+            playlist_id_input = input("\n请输入歌单ID: ").strip()
+            if not playlist_id_input:
+                print("歌单ID不能为空")
+                return
+            try:
+                playlist_id = int(playlist_id_input)
+            except ValueError:
+                print("请输入有效的数字ID")
+                return
+        else:
+            print("无效的选择")
+            return
+        
+        if not playlist_id:
+            print("未能获取歌单ID")
+            return
+        
+        # 获取歌单详情
+        print(f"\n正在获取歌单 {playlist_id} 的详细信息...")
+        detail = await service.get_playlist_detail(playlist_id)
+        
+        if detail.get("error"):
+            print(f"\n✗ 错误: {detail.get('error')}")
+            if detail.get("code"):
+                print(f"  错误码: {detail.get('code')}")
+            return
+        
+        # 显示歌单详情
+        print(f"\n\u2713 成功获取歌单详情")
+        print(f"\n{'=' * 50}")
+        print(f"歌单ID: {detail.get('id')}")
+        print(f"歌单名称: {detail.get('name')}")
+        print(f"创建者: {detail.get('creator', {}).get('nickname')} (ID: {detail.get('creator', {}).get('id')})")
+        print(f"歌曲数量: {detail.get('track_count')}")
+        print(f"播放次数: {detail.get('play_count')}")
+        print(f"收藏次数: {detail.get('subscribed_count')}")
+        
+        tags = detail.get('tags')
+        if tags:
+            print(f"标签: {', '.join(tags)}")
+        
+        if detail.get('description'):
+            desc = detail.get('description', '')
+            if len(desc) > 100:
+                desc = desc[:100] + "..."
+            print(f"描述: {desc}")
+        
+        # 显示部分歌曲
+        tracks = detail.get('tracks', [])
+        if tracks:
+            print(f"\n歌曲列表 (前10首):")
+            for i, track in enumerate(tracks[:10], 1):
+                track_name = track.get('name', '未知歌曲')
+                artists = track.get('ar', [])
+                artist_names = ', '.join([ar.get('name', '') for ar in artists])
+                print(f"  {i}. {track_name} - {artist_names}")
+            
+            if len(tracks) > 10:
+                print(f"\n  ... 还有 {len(tracks) - 10} 首歌曲")
+        else:
+            # 如果没有tracks，可能只有track_ids
+            track_count = detail.get('track_count', 0)
+            if track_count > 0:
+                print(f"\n歌单包含 {track_count} 首歌曲（需要单独查询歌曲详情）")
+        
+        print(f"{'=' * 50}")
+        
+    except KeyboardInterrupt:
+        print("\n\n操作已取消")
+    except Exception as e:
+        print(f"\n✗ 异常: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 async def test_cookie_login():
     """测试Cookie登录"""
     print("\n" + "=" * 50)
@@ -319,11 +457,12 @@ async def main():
         print("4. 邮箱登录")
         print("5. 手机号+验证码登录")
         print("6. 获取用户歌单")
-        print("7. 登出")
+        print("7. 获取歌单详细信息")
+        print("8. 登出")
         print("0. 退出")
         
         try:
-            choice = input("\n请输入选项 (0-7): ").strip()
+            choice = input("\n请输入选项 (0-8): ").strip()
             
             if choice == "0":
                 print("\n测试结束")
@@ -341,6 +480,8 @@ async def main():
             elif choice == "6":
                 await test_user_playlist()
             elif choice == "7":
+                await test_playlist_detail()
+            elif choice == "8":
                 await test_logout()
             else:
                 print("无效选项，请重新选择")

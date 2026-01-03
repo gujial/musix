@@ -345,6 +345,54 @@ class NeteaseService(AuthenticatedMediaService):
                 "error": str(e)
             }
     
+    async def get_playlist_detail(self, playlist_id: Any, **kwargs) -> dict:
+        """
+        获取歌单详细信息
+        
+        Args:
+            playlist_id: 歌单ID
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 歌单详细信息
+        """
+        try:
+            playlist_id = int(playlist_id)
+            response = apis.playlist.GetPlaylistInfo(playlist_id)
+            response_data: dict[str, Any] = response  # type: ignore
+            
+            if response_data.get("code") != 200:
+                return {
+                    "error": response_data.get("message", "获取歌单信息失败"),
+                    "code": response_data.get("code")
+                }
+            
+            playlist = response_data.get("playlist", {})
+            
+            return {
+                "id": playlist.get("id"),
+                "name": playlist.get("name"),
+                "description": playlist.get("description"),
+                "cover_img_url": playlist.get("coverImgUrl"),
+                "creator": {
+                    "id": playlist.get("creator", {}).get("userId"),
+                    "nickname": playlist.get("creator", {}).get("nickname"),
+                    "avatar_url": playlist.get("creator", {}).get("avatarUrl")
+                },
+                "tracks": playlist.get("tracks", []),
+                "track_ids": playlist.get("trackIds", []),
+                "track_count": playlist.get("trackCount", 0),
+                "play_count": playlist.get("playCount", 0),
+                "subscribed_count": playlist.get("subscribedCount", 0),
+                "create_time": playlist.get("createTime"),
+                "update_time": playlist.get("updateTime"),
+                "tags": playlist.get("tags", [])
+            }
+        except Exception as e:
+            return {
+                "error": f"获取歌单详情异常: {str(e)}"
+            }
+    
     async def search(self, keywords: str, page: int = 1, **kwargs) -> dict:
         """搜索网易云音乐（实现抽象方法）"""
         page_limit = kwargs.get('page_limit', 25)
