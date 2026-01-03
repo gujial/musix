@@ -3,11 +3,16 @@ Musix FastAPI 主应用
 提供音乐和视频媒体服务的 RESTful API
 启动时自动从环境变量读取凭证并登录
 """
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, netease, bilibili
 from app.auth import session_manager
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 
 @asynccontextmanager
@@ -31,9 +36,13 @@ app = FastAPI(
 )
 
 # 配置 CORS
+# 从环境变量读取允许的源，如果未设置则使用默认值
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")] if allowed_origins_str != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该配置具体的域名
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
