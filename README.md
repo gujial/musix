@@ -81,20 +81,6 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ## 📝 使用示例
 
-### 登录获取 Token
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "platform": "netease",
-    "method": "cookie",
-    "credentials": {
-      "cookie": "MUSIC_U=your_cookie"
-    }
-  }'
-```
-
 ### 搜索歌曲
 
 ```bash
