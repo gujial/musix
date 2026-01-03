@@ -32,20 +32,21 @@ def fix_bilibili_atexit():
         pass
 
 
-def play_with_ffmpeg(url: str, media_type: str = "audio", duration: int = 30):
+def play_with_ffmpeg(url: str, media_type: str = "audio", duration: int | None = None):
     """
     使用ffmpeg播放URL
     
     Args:
         url: 媒体URL
         media_type: 媒体类型，"audio" 或 "video"
-        duration: 播放时长（秒），默认30秒
+        duration: 播放时长（秒），None表示完整播放
     """
     if not url:
         print("   ✗ URL为空，无法播放")
         return
     
-    print(f"\n   使用ffmpeg播放{media_type}... (播放 {duration} 秒)")
+    duration_text = f"播放 {duration} 秒" if duration else "完整播放"
+    print(f"\n   使用ffmpeg播放{media_type}... ({duration_text})")
     print(f"   URL: {url[:80]}...")
     
     try:
@@ -61,18 +62,24 @@ def play_with_ffmpeg(url: str, media_type: str = "audio", duration: int = 30):
             cmd = [
                 'ffmpeg',
                 '-i', url,
-                '-t', str(duration),  # 限制播放时长
                 '-f', 'pulse',  # Linux音频输出
                 '-'
             ]
+            # 如果指定了时长，添加时长限制
+            if duration:
+                cmd.insert(3, '-t')
+                cmd.insert(4, str(duration))
         else:
             # 播放视频
             cmd = [
                 'ffplay',  # 使用ffplay来播放视频
                 '-i', url,
-                '-t', str(duration),
                 '-autoexit'  # 播放结束后自动退出
             ]
+            # 如果指定了时长，添加时长限制
+            if duration:
+                cmd.insert(3, '-t')
+                cmd.insert(4, str(duration))
         
         print(f"   按 Ctrl+C 可随时停止播放")
         print(f"   开始播放...\n")
@@ -86,7 +93,11 @@ def play_with_ffmpeg(url: str, media_type: str = "audio", duration: int = 30):
                 stderr=subprocess.PIPE
             )
             
-            process.wait(timeout=duration + 5)
+            # 如果指定了时长，使用超时等待；否则等待播放完成
+            if duration:
+                process.wait(timeout=duration + 5)
+            else:
+                process.wait()
             print(f"\n   播放完成")
             
         except subprocess.TimeoutExpired:
@@ -110,8 +121,8 @@ def ask_to_play(url: str, media_type: str = "audio"):
     try:
         response = input(f"\n   是否使用ffmpeg播放{media_type}? (y/n): ").strip().lower()
         if response == 'y':
-            duration = input("   播放时长(秒, 默认30): ").strip()
-            duration = int(duration) if duration.isdigit() else 30
+            duration_input = input("   播放时长(秒, 留空表示完整播放): ").strip()
+            duration = int(duration_input) if duration_input.isdigit() else None
             play_with_ffmpeg(url, media_type, duration)
     except KeyboardInterrupt:
         print("\n   已跳过播放")
@@ -176,7 +187,7 @@ async def test_bilibili_service():
     # 测试搜索功能
     print("\n1. 测试搜索视频...")
     try:
-        search_result = await service.search("电棍", page=1)
+        search_result = await service.search("说的道理", page=1)
         print(f"   当前页: {search_result['current_page']}")
         print(f"   总页数: {search_result.get('total_pages', 0)}")
         # 支持新的items字段和旧的videos字段
@@ -198,7 +209,7 @@ async def test_bilibili_service():
         # 测试获取视频信息
         if videos:
             print("\n2. 测试获取视频信息...")
-            video_item = videos[1]
+            video_item = videos[0]
             bvid = video_item.get('bvid') or video_item.get('bv_id')
             if bvid:
                 video_info = await service.get_media_info(bvid, page=0)
@@ -220,12 +231,12 @@ async def test_bilibili_service():
                     try:
                         choice = input("\n   选择播放选项 (1/2/n): ").strip()
                         if choice == '1' and video_info['video_url']:
-                            duration = input("   播放时长(秒, 默认30): ").strip()
-                            duration = int(duration) if duration.isdigit() else 30
+                            duration_input = input("   播放时长(秒, 留空表示完整播放): ").strip()
+                            duration = int(duration_input) if duration_input.isdigit() else None
                             play_with_ffmpeg(video_info['video_url'], "video", duration)
                         elif choice == '2' and video_info['audio_url']:
-                            duration = input("   播放时长(秒, 默认30): ").strip()
-                            duration = int(duration) if duration.isdigit() else 30
+                            duration_input = input("   播放时长(秒, 留空表示完整播放): ").strip()
+                            duration = int(duration_input) if duration_input.isdigit() else None
                             play_with_ffmpeg(video_info['audio_url'], "audio", duration)
                     except KeyboardInterrupt:
                         print("\n   已跳过播放")
