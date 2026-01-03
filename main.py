@@ -1,10 +1,24 @@
 """
 Musix FastAPI 主应用
 提供音乐和视频媒体服务的 RESTful API
+启动时自动从环境变量读取凭证并登录
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, netease, bilibili
+from app.auth import session_manager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理 - 启动时自动登录"""
+    # 启动时执行
+    await session_manager.initialize_login()
+    yield
+    # 关闭时执行（如果需要清理资源）
+    print("\n👋 服务正在关闭...")
+
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -12,7 +26,8 @@ app = FastAPI(
     description="统一音乐和视频媒体服务接口",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # 配置 CORS

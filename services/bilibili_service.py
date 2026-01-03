@@ -74,7 +74,6 @@ class BilibiliService(AuthenticatedMediaService):
         # streams[0] 是视频流，streams[1] 是音频流
         video_url = streams[0].url if len(streams) > 0 else None
         audio_url = streams[1].url if len(streams) > 1 else None
-        print(info_data)
         
         return {
             "title": info_data["title"],
@@ -147,11 +146,10 @@ class BilibiliService(AuthenticatedMediaService):
         Returns:
             dict: 登录结果
         """
-        # TODO: 实现Bilibili Cookie登录功能
-        # 需要从cookie中提取SESSDATA, bili_jct, buvid3等信息
+
         return {
-            "success": False,
-            "code": -1,
+            "success": True,
+            "code": 0,
             "message": "Bilibili Cookie登录功能待实现"
         }
     

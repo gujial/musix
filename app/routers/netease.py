@@ -28,19 +28,21 @@ async def search_songs(
     支持按关键词搜索歌曲，返回包含歌曲基本信息的分页结果
     """
     try:
-        # 计算偏移量
-        offset = (page - 1) * limit
-        
         # 调用搜索服务
-        result = await service.search(keywords=keywords, limit=limit, offset=offset)
+        result = await service.search(keywords=keywords, limit=limit, page=page)
         
-        # 解析搜索结果
-        songs_data = result.get("result", {}).get("songs", [])
-        total_count = result.get("result", {}).get("songCount", 0)
+        # 从标准化的返回结构中提取数据
+        songs_data = result.get("songs", [])
+        total_count = result.get("total_count", 0)
         
         # 转换为响应模型
         items = []
         for song in songs_data:
+            album = song.get("al") or {}
+            album_id = album.get("id") or 0
+            album_name = album.get("name") or "未知专辑"
+            album_pic = album.get("picUrl")
+            
             items.append(SongSearchResult(
                 id=song.get("id"),
                 name=song.get("name"),
@@ -49,9 +51,9 @@ async def search_songs(
                     for artist in song.get("artists", [])
                 ],
                 album=AlbumInfo(
-                    id=song.get("album", {}).get("id"),
-                    name=song.get("album", {}).get("name"),
-                    pic_url=song.get("album", {}).get("picUrl")
+                    id=album_id,
+                    name=album_name,
+                    pic_url=album_pic
                 ),
                 duration=song.get("duration", 0),
                 fee=song.get("fee")

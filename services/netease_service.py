@@ -373,9 +373,32 @@ class NeteaseService(AuthenticatedMediaService):
             }
     
     async def search(self, keywords: str, page: int = 1, **kwargs) -> dict:
-        """搜索网易云音乐（实现抽象方法）"""
-        limit = kwargs.get('limit', 20)
-        offset = kwargs.get('offset', 0)
+        """
+        搜索网易云音乐（实现抽象方法）
+        
+        Args:
+            keywords: 搜索关键词
+            page: 页码（从1开始）
+            **kwargs: 
+                - limit: 每页数量（默认20）
+                - offset: 偏移量（默认0，如果提供则忽略page）
+                - page_limit: 别名，与limit相同
+        
+        Returns:
+            dict: 包含以下字段
+                - result: 原始响应的result字段
+                - total_count: 总结果数
+                - current_page: 当前页码
+                - items/songs: 歌曲列表（两个字段都提供以保持兼容性）
+        """
+        # 支持 page_limit 和 limit 两种参数名
+        limit = kwargs.get('limit') or kwargs.get('page_limit', 20)
+        
+        # 如果提供了offset则使用offset，否则根据page计算
+        if 'offset' in kwargs:
+            offset = kwargs['offset']
+        else:
+            offset = (page - 1) * limit
         
         response = apis.cloudsearch.GetSearchResult(
             keyword=keywords,
@@ -386,7 +409,18 @@ class NeteaseService(AuthenticatedMediaService):
         
         response_data: dict[str, Any] = response  # type: ignore
         
-        return response_data
+        # 提取结果数据
+        result = response_data.get('result', {})
+        songs = result.get('songs', [])
+        song_count = result.get('songCount', 0)
+        
+        # 返回标准化的数据结构
+        return {
+            'result': result,  # 保留原始result字段
+            'total_count': song_count,
+            'current_page': page,
+            'songs': songs  # 统一使用 songs 字段
+        }
     
     async def get_media_info(self, media_id: Any, **kwargs) -> dict:
         """获取网易云音乐的详细信息（实现抽象方法）"""

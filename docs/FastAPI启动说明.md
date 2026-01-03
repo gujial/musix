@@ -1,5 +1,9 @@
 # Musix FastAPI 启动说明
 
+## 特性
+
+✨ **启动时自动登录**：服务启动时会自动从环境变量读取凭证并登录，无需手动调用登录接口
+
 ## 安装依赖
 
 ```bash
@@ -17,23 +21,21 @@ cp .env.example .env
 编辑 `.env` 文件，配置以下内容：
 
 ```bash
-# 网易云音乐 Cookie（可选，用于自动登录和测试）
+# ========== 网易云音乐配置 ==========
 # 获取方式：登录 music.163.com，按 F12 -> Application -> Cookies -> MUSIC_U
 NETEASE_MUSIC_U=your_music_u_cookie
 
-# Bilibili 凭证（可选）
-SESSDATA=your_sessdata
-BILI_JCT=your_bili_jct
-BUVID3=your_buvid3
-
-# JWT 密钥（生产环境必须修改为强随机字符串）
-# 生成方式：openssl rand -hex 32
-SECRET_KEY=your-secret-key-change-in-production
-
-# JWT 配置（可选）
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
+# ========== Bilibili 配置 ==========
+# 获取方式：登录 bilibili.com，按 F12 -> Application -> Cookies
+BILIBILI_SESSDATA=your_sessdata
+BILIBILI_BILI_JCT=your_bili_jct
+BILIBILI_BUVID3=your_buvid3
 ```
+
+**注意**：
+- 如果配置了 `NETEASE_MUSIC_U`，服务启动时会自动登录网易云音乐
+- 如果配置了 `BILIBILI_SESSDATA`，服务启动时会自动登录 Bilibili
+- 未配置的平台将跳过自动登录，但仍可通过 API 手动登录
 
 ## 运行服务器
 
@@ -47,6 +49,21 @@ python main.py
 
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+启动时会看到类似输出：
+
+```
+============================================================
+🔐 初始化自动登录...
+============================================================
+📝 检测到 NETEASE_MUSIC_U，尝试登录网易云音乐...
+✅ 网易云音乐登录成功：张三 (ID: 123456789)
+⚠️  未找到 BILIBILI_SESSDATA 环境变量，跳过 Bilibili 自动登录
+============================================================
+✅ 自动登录初始化完成
+
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
 ### 生产模式

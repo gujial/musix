@@ -145,8 +145,7 @@ async def test_netease_service():
         search_result = await service.search("电棍", page=1, page_limit=5)
         print(f"   总结果数: {search_result['total_count']}")
         print(f"   当前页: {search_result['current_page']}")
-        # 支持新的items字段和旧的songs字段
-        songs = search_result.get('items') or search_result.get('songs', [])
+        songs = search_result.get('songs', [])
         print(f"   返回歌曲数: {len(songs)}")
         
         if songs:
