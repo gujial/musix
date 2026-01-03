@@ -5,12 +5,14 @@
 ## 当前支持的服务
 
 ### NeteaseService (网易云音乐)
+
 - 搜索歌曲
 - 获取歌曲详细信息和下载链接
 - 用户登录（Cookie、手机号、邮箱等）
 - 获取用户歌单
 
 ### BilibiliService (Bilibili视频)
+
 - 搜索视频
 - 获取视频详细信息和流媒体链接
 - 登录功能（待实现）
@@ -23,6 +25,7 @@
    在 `services/` 目录下创建新文件，例如 `spotify_service.py`
 
 2. **继承抽象基类**
+
    ```python
    from ..media_service import AuthenticatedMediaService  # 需要登录
    # 或
@@ -44,15 +47,17 @@
        # 实现其他必需的抽象方法...
    ```
 
-3. **更新 __init__.py**
+3. **更新 \_\_init\_\_.py**
    在 `services/__init__.py` 中添加导入：
+
    ```python
    from .spotify_service import SpotifyService
    
    __all__ = ["NeteaseService", "BilibiliService", "SpotifyService"]
    ```
 
-4. **更新主包的 __init__.py**
+4. **更新主包的 \_\_init\_\_.py**
+
    在 `/home/gujial/repos/musix/__init__.py` 中添加导出（可选）
 
 ## 使用示例
@@ -76,6 +81,7 @@ video_info = await bilibili.get_media_info("BV1xx411c7mD")
 ## 架构说明
 
 所有服务都继承自 `MediaService` 或 `AuthenticatedMediaService`，这确保了：
+
 - 统一的接口规范
 - 一致的返回格式
 - 易于扩展和维护
