@@ -9,7 +9,7 @@ from pathlib import Path
 # 添加父目录到系统路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from netease_service import NeteaseService
+from services.netease_service import NeteaseService
 
 
 # 创建全局服务实例
@@ -221,7 +221,7 @@ async def test_user_playlist():
         return
     
     print("\n正在获取歌单...")
-    result = await service.get_user_playlist()
+    result = await service.get_user_playlists()
     
     if result.get("error"):
         print(f"✗ 错误: {result.get('error')}")

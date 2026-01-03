@@ -1,3 +1,4 @@
 pyncm
 bilibili-api-python
 python-dotenv
+aiohttp

@@ -9,8 +9,8 @@ from pathlib import Path
 # 添加父目录到系统路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from netease_service import NeteaseService
-from bilibili_service import BilibiliService
+from services.netease_service import NeteaseService
+from services.bilibili_service import BilibiliService
 
 
 # 修复 bilibili_api 的 atexit 错误
@@ -131,22 +131,24 @@ async def test_netease_service():
     # 测试搜索功能
     print("\n1. 测试搜索歌曲...")
     try:
-        search_result = await service.search_songs("周杰伦", page=1, page_limit=5)
+        search_result = await service.search("周杰伦", page=1, page_limit=5)
         print(f"   总结果数: {search_result['total_count']}")
         print(f"   当前页: {search_result['current_page']}")
-        print(f"   返回歌曲数: {len(search_result['songs'])}")
+        # 支持新的items字段和旧的songs字段
+        songs = search_result.get('items') or search_result.get('songs', [])
+        print(f"   返回歌曲数: {len(songs)}")
         
-        if search_result['songs']:
+        if songs:
             print("\n   前3首歌曲:")
-            for i, song in enumerate(search_result['songs'][:3], 1):
+            for i, song in enumerate(songs[:3], 1):
                 print(f"   {i}. {song['name']} - {song['ar'][0]['name']}")
                 print(f"      ID: {song['id']}")
         
         # 测试获取音频信息
-        if search_result['songs']:
+        if songs:
             print("\n2. 测试获取音频信息...")
-            song_id = search_result['songs'][0]['id']
-            audio_info = await service.get_netease_audio_info(song_id)
+            song_id = songs[0]['id']
+            audio_info = await service.get_media_info(song_id)
             print(f"   歌曲名: {audio_info['title']}")
             print(f"   作者: {audio_info['author']}")
             print(f"   专辑: {audio_info['album_name']}")
@@ -174,14 +176,16 @@ async def test_bilibili_service():
     # 测试搜索功能
     print("\n1. 测试搜索视频...")
     try:
-        search_result = await service.search_videos("周杰伦", page=1)
+        search_result = await service.search("周杰伦", page=1)
         print(f"   当前页: {search_result['current_page']}")
-        print(f"   总页数: {search_result['total_pages']}")
-        print(f"   返回视频数: {len(search_result['videos'])}")
+        print(f"   总页数: {search_result.get('total_pages', 0)}")
+        # 支持新的items字段和旧的videos字段
+        videos = search_result.get('items') or search_result.get('videos', [])
+        print(f"   返回视频数: {len(videos)}")
         
-        if search_result['videos']:
+        if videos:
             print("\n   前3个视频:")
-            for i, video in enumerate(search_result['videos'][:3], 1):
+            for i, video in enumerate(videos[:3], 1):
                 title = video.get('title', '未知标题')
                 author = video.get('author', video.get('upname', '未知作者'))
                 bvid = video.get('bvid', video.get('bv_id', '未知BV号'))
@@ -192,12 +196,12 @@ async def test_bilibili_service():
             print("   提示: 没有返回视频结果，可能需要配置Bilibili凭证或API不可用")
         
         # 测试获取视频信息
-        if search_result['videos']:
+        if videos:
             print("\n2. 测试获取视频信息...")
-            video_item = search_result['videos'][1]
+            video_item = videos[1]
             bvid = video_item.get('bvid') or video_item.get('bv_id')
             if bvid:
-                video_info = await service.get_video_info(bvid, page=0)
+                video_info = await service.get_media_info(bvid, page=0)
                 print(f"   标题: {video_info['title']}")
                 print(f"   UP主: {video_info['owner']['name']}")
                 print(f"   播放量: {video_info['stat']['view']}")

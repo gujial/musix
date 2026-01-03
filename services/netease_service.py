@@ -7,12 +7,12 @@ import os
 from typing import Any, Optional
 from dotenv import load_dotenv
 from pyncm import apis, GetCurrentSession
+from media_service import AuthenticatedMediaService
 
 # 加载 .env 文件
 load_dotenv()
 
-
-class NeteaseService:
+class NeteaseService(AuthenticatedMediaService):
     """网易云音乐服务类"""
     
     def __init__(self, auto_login: bool = True):
@@ -22,9 +22,8 @@ class NeteaseService:
         Args:
             auto_login: 是否自动尝试使用cookie登录（默认True）
         """
+        super().__init__(auto_login)
         self.session = GetCurrentSession()
-        self.is_logged_in = False
-        self.user_info: dict[str, Any] = {}
         
         # 自动尝试cookie登录
         if auto_login:
@@ -49,17 +48,19 @@ class NeteaseService:
                     # 静默失败，不影响服务使用
                     pass
     
-    async def login_by_cookie(self, music_u: Optional[str] = None) -> dict:
+    async def login_by_cookie(self, cookie: Optional[str] = None, **kwargs) -> dict:
         """
         使用Cookie登录网易云音乐
         
         Args:
-            music_u: MUSIC_U cookie值（如果不提供，则从环境变量NETEASE_MUSIC_U中读取）
+            cookie: MUSIC_U cookie值（如果不提供，则从环境变量NETEASE_MUSIC_U中读取）
+            **kwargs: 其他参数
             
         Returns:
             dict: 登录结果
         """
         try:
+            music_u = cookie
             if music_u is None:
                 music_u = os.getenv("NETEASE_MUSIC_U", "")
             
@@ -107,7 +108,7 @@ class NeteaseService:
                 "message": f"Cookie登录异常: {str(e)}"
             }
     
-    async def send_login_captcha(self, phone: str, country_code: int = 86) -> dict:
+    async def send_login_captcha(self, phone: str, country_code: int = 86, **kwargs) -> dict:
         """发送登录验证码到手机"""
         try:
             response = apis.login.SetSendRegisterVerifcationCodeViaCellphone(
@@ -139,7 +140,8 @@ class NeteaseService:
         self,
         phone: str,
         captcha: str,
-        country_code: int = 86
+        country_code: int = 86,
+        **kwargs
     ) -> dict:
         """使用手机号和验证码登录"""
         try:
@@ -181,7 +183,7 @@ class NeteaseService:
                 "message": f"登录异常: {str(e)}"
             }
     
-    async def login_by_phone(self, phone: str, password: str, country_code: int = 86) -> dict:
+    async def login_by_phone(self, phone: str, password: str, country_code: int = 86, **kwargs) -> dict:
         """使用手机号和密码登录"""
         try:
             response = apis.login.LoginViaCellphone(phone=phone, password=password, ctcode=country_code)
@@ -238,7 +240,7 @@ class NeteaseService:
                 "message": f"登录异常: {error_str}"
             }
     
-    async def login_by_email(self, email: str, password: str) -> dict:
+    async def login_by_email(self, email: str, password: str, **kwargs) -> dict:
         """使用邮箱登录"""
         try:
             response = apis.login.LoginViaEmail(email=email, password=password)
@@ -315,8 +317,8 @@ class NeteaseService:
                 "message": f"登出异常: {str(e)}"
             }
     
-    async def get_user_playlist(self, user_id: Optional[int] = None) -> dict:
-        """获取用户歌单列表"""
+    async def get_user_playlists(self, user_id: Optional[int] = None, **kwargs) -> dict:
+        """获取用户歌单列表（实现抽象方法）"""
         try:
             if user_id is None:
                 status = await self.check_login_status()
@@ -343,8 +345,9 @@ class NeteaseService:
                 "error": str(e)
             }
     
-    async def search_songs(self, keywords: str, page: int = 1, page_limit: int = 25) -> dict:
-        """搜索网易云音乐"""
+    async def search(self, keywords: str, page: int = 1, **kwargs) -> dict:
+        """搜索网易云音乐（实现抽象方法）"""
+        page_limit = kwargs.get('page_limit', 25)
         offset = page_limit * (page - 1)
         response = apis.cloudsearch.GetSearchResult(
             keyword=keywords,
@@ -358,14 +361,16 @@ class NeteaseService:
         total_count = response_data.get("result", {}).get("songCount", 0)
         
         return {
-            "songs": songs,
+            "items": songs,  # 统一字段名
+            "songs": songs,  # 保持向后兼容
             "total_count": total_count,
             "current_page": page,
             "page_limit": page_limit
         }
     
-    async def get_netease_audio_info(self, song_id: int) -> dict:
-        """获取网易云音乐的详细信息和音频URL"""
+    async def get_media_info(self, media_id: Any, **kwargs) -> dict:
+        """获取网易云音乐的详细信息（实现抽象方法）"""
+        song_id = int(media_id)
         detail = apis.track.GetTrackDetail([song_id])
         audio = apis.track.GetTrackAudio([song_id])
         
