@@ -259,7 +259,7 @@ class BilibiliService(AuthenticatedMediaService):
         Returns:
             dict: 热门视频列表
         """
-        from bilibili_api import search as bilibili_search
+        from bilibili_api import search as bilibili_search, homepage
         from datetime import datetime, timedelta
         
         # 计算时间范围
@@ -276,60 +276,105 @@ class BilibiliService(AuthenticatedMediaService):
                 "keyword": tag,
                 "search_type": bilibili_search.SearchObjectType.VIDEO,
                 "order_type": bilibili_search.OrderVideo.TOTALRANK,  # 综合排序
-                "page": page,
-                "page_size": page_size
+                "page": page
             }
             # 只在提供days参数时才添加时间范围
             if start_time is not None and end_time is not None:
-                search_params["time_start"] = start_time.strftime("%Y-%m-%d")
-                search_params["time_end"] = end_time.strftime("%Y-%m-%d")
+                search_params["time_range"] = (
+                    int(start_time.timestamp()), 
+                    int(end_time.timestamp())
+                )
             
             search_result = sync(
                 bilibili_search.search_by_type(**search_params)
             )
-        else:
-            # 获取全站热门（使用搜索接口的热门视频）
-            search_result = sync(
-                bilibili_search.search(
-                    "",  # 空关键词
-                    page=page
-                )
-            )
-        
-        response_data: dict[str, Any] = search_result  # type: ignore
-        
-        # 提取视频结果
-        video_results = []
-        result_list = response_data.get('result', [])
-        if isinstance(result_list, list):
-            for item in result_list:
-                if isinstance(item, dict) and item.get('result_type') == 'video':
-                    video_results = item.get('data', [])
-                    break
-        
-        # 如果通过标签搜索失败，尝试使用关键词搜索
-        if not video_results and tag:
-            search_result = sync(bilibili_search.search(tag, page=page))
-            response_data = search_result  # type: ignore
+            
+            response_data: dict[str, Any] = search_result  # type: ignore
+            
+            # 提取视频结果
+            video_results = []
             result_list = response_data.get('result', [])
             if isinstance(result_list, list):
                 for item in result_list:
                     if isinstance(item, dict) and item.get('result_type') == 'video':
                         video_results = item.get('data', [])
                         break
+            
+            # 如果通过标签搜索失败，尝试使用关键词搜索
+            if not video_results:
+                search_result = sync(bilibili_search.search(tag, page=page))
+                response_data = search_result  # type: ignore
+                result_list = response_data.get('result', [])
+                if isinstance(result_list, list):
+                    for item in result_list:
+                        if isinstance(item, dict) and item.get('result_type') == 'video':
+                            video_results = item.get('data', [])
+                            break
+            
+            # 按播放量排序（确保返回真正的热门视频）
+            if video_results:
+                video_results = sorted(
+                    video_results,
+                    key=lambda x: x.get('play', 0) if isinstance(x.get('play'), int) else 0,
+                    reverse=True
+                )
+            
+            # 限制返回数量
+            start_idx = 0
+            end_idx = min(page_size, len(video_results))
+            video_results = video_results[start_idx:end_idx]
+            
+            total_pages = response_data.get('numPages', 0)
+            if total_pages == 0 and video_results:
+                total_pages = 1
+        else:
+            # 获取全站热门（使用首页推荐API）
+            popular_result = sync(homepage.get_videos())
+            response_data: dict[str, Any] = popular_result  # type: ignore
+            
+            # 首页推荐返回的是视频列表
+            all_videos = response_data.get('item', []) if isinstance(response_data, dict) else []
+            
+            # 如果是列表，直接使用
+            if isinstance(all_videos, list):
+                video_results = all_videos
+            else:
+                video_results = []
+            
+            # 按播放量排序
+            if video_results:
+                # 转换数据格式以匹配搜索结果
+                formatted_videos = []
+                for v in video_results:
+                    if isinstance(v, dict):
+                        formatted_videos.append({
+                            'bvid': v.get('bvid', ''),
+                            'aid': v.get('id', 0),
+                            'title': v.get('title', ''),
+                            'description': v.get('desc', ''),
+                            'pic': v.get('pic', ''),
+                            'author': v.get('owner', {}).get('name', ''),
+                            'mid': v.get('owner', {}).get('mid', 0),
+                            'duration': str(v.get('duration', 0)),
+                            'play': v.get('stat', {}).get('view', 0),
+                            'pubdate': v.get('pubdate', 0)
+                        })
+                
+                video_results = sorted(
+                    formatted_videos,
+                    key=lambda x: x.get('play', 0) if isinstance(x.get('play'), int) else 0,
+                    reverse=True
+                )
+            
+            # 分页处理
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            total_count = len(video_results)
+            video_results = video_results[start_idx:end_idx]
+            
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
         
-        # 按播放量排序（确保返回真正的热门视频）
-        if video_results:
-            video_results = sorted(
-                video_results,
-                key=lambda x: x.get('play', 0) if isinstance(x.get('play'), int) else 0,
-                reverse=True
-            )
-        
-        # 获取总页数
-        total_pages = response_data.get('numPages', 0)
-        if total_pages == 0 and video_results:
-            total_pages = 1
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
         
         return {
             "items": video_results,
