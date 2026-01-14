@@ -22,6 +22,64 @@ def get_bilibili_service() -> BilibiliService:
     return session_manager.bilibili_service
 
 
+@router.get("/popular", response_model=ResponseModel[PaginatedResponse[VideoSearchResult]])
+async def get_popular_videos(
+    tag: Optional[str] = Query(None, description="标签名称，不提供则获取全站热门"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=50, description="每页数量"),
+    days: Optional[int] = Query(None, ge=1, le=365, description="时间范围（天数），可选，1=当天，7=本周，30=本月，不提供则不限制时间"),
+    service: BilibiliService = Depends(get_bilibili_service)
+):
+    """
+    获取热门视频
+    
+    按标签和时间范围获取热门视频，可选择是否限制时间范围
+    """
+    try:
+        # 调用服务获取热门视频
+        result = await service.get_popular_videos(
+            tag=tag,
+            page=page,
+            page_size=page_size,
+            days=days
+        )
+        
+        # 转换为响应格式
+        items = []
+        for video in result.get("items", []):
+            items.append(VideoSearchResult(
+                bvid=video.get("bvid", ""),
+                aid=video.get("aid", 0),
+                title=video.get("title", ""),
+                description=video.get("description", ""),
+                pic=video.get("pic", ""),
+                author=video.get("author", ""),
+                mid=video.get("mid", 0),
+                duration=video.get("duration", ""),
+                play=video.get("play", 0),
+                pubdate=video.get("pubdate", 0)
+            ))
+        
+        return ResponseModel(
+            code=200,
+            data=PaginatedResponse(
+                items=items,
+                pagination=PaginationInfo(
+                    current_page=result.get("current_page", page),
+                    page_size=len(items),
+                    total_count=result.get("total_count", len(items)),
+                    total_pages=result.get("total_pages", 1)
+                )
+            )
+        )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取热门视频失败: {str(e)}"
+        )
+
+
 @router.get("/search", response_model=ResponseModel[PaginatedResponse[VideoSearchResult]])
 async def search_videos(
     keywords: str = Query(..., description="搜索关键词"),

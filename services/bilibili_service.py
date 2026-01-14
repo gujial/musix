@@ -238,6 +238,108 @@ class BilibiliService(AuthenticatedMediaService):
             "message": "Bilibili二维码登录功能待实现"
         }
     
+    async def get_popular_videos(
+        self,
+        tag: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+        days: Optional[int] = None,
+        **kwargs
+    ) -> dict:
+        """
+        获取热门视频
+        
+        Args:
+            tag: 标签名称（可选），如果不提供则获取全站热门
+            page: 页码
+            page_size: 每页数量
+            days: 时间范围（天数），可选，1=当天，7=本周，30=本月，不提供则不限制时间
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 热门视频列表
+        """
+        from bilibili_api import search as bilibili_search
+        from datetime import datetime, timedelta
+        
+        # 计算时间范围
+        if days is not None:
+            end_time = datetime.now()
+            start_time = end_time - timedelta(days=days)
+        else:
+            start_time = None
+            end_time = None
+        
+        if tag:
+            # 使用标签搜索，按综合排序（包含播放量、点赞等因素）
+            search_params = {
+                "keyword": tag,
+                "search_type": bilibili_search.SearchObjectType.VIDEO,
+                "order_type": bilibili_search.OrderVideo.TOTALRANK,  # 综合排序
+                "page": page,
+                "page_size": page_size
+            }
+            # 只在提供days参数时才添加时间范围
+            if start_time is not None and end_time is not None:
+                search_params["time_start"] = start_time.strftime("%Y-%m-%d")
+                search_params["time_end"] = end_time.strftime("%Y-%m-%d")
+            
+            search_result = sync(
+                bilibili_search.search_by_type(**search_params)
+            )
+        else:
+            # 获取全站热门（使用搜索接口的热门视频）
+            search_result = sync(
+                bilibili_search.search(
+                    "",  # 空关键词
+                    page=page
+                )
+            )
+        
+        response_data: dict[str, Any] = search_result  # type: ignore
+        
+        # 提取视频结果
+        video_results = []
+        result_list = response_data.get('result', [])
+        if isinstance(result_list, list):
+            for item in result_list:
+                if isinstance(item, dict) and item.get('result_type') == 'video':
+                    video_results = item.get('data', [])
+                    break
+        
+        # 如果通过标签搜索失败，尝试使用关键词搜索
+        if not video_results and tag:
+            search_result = sync(bilibili_search.search(tag, page=page))
+            response_data = search_result  # type: ignore
+            result_list = response_data.get('result', [])
+            if isinstance(result_list, list):
+                for item in result_list:
+                    if isinstance(item, dict) and item.get('result_type') == 'video':
+                        video_results = item.get('data', [])
+                        break
+        
+        # 按播放量排序（确保返回真正的热门视频）
+        if video_results:
+            video_results = sorted(
+                video_results,
+                key=lambda x: x.get('play', 0) if isinstance(x.get('play'), int) else 0,
+                reverse=True
+            )
+        
+        # 获取总页数
+        total_pages = response_data.get('numPages', 0)
+        if total_pages == 0 and video_results:
+            total_pages = 1
+        
+        return {
+            "items": video_results,
+            "total_count": len(video_results),
+            "total_pages": total_pages,
+            "current_page": page,
+            "tag": tag,
+            "days": days
+        }
+    
     async def get_playlist_detail(self, playlist_id: Any, **kwargs) -> dict:
         """
         获取Bilibili收藏夹详细信息

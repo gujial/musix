@@ -447,7 +447,68 @@ GET /api/v1/netease/toplist/3778678
 
 ## 5. Bilibili API
 
-### 5.1 搜索视频
+### 5.1 获取热门视频
+
+**接口**: `GET /bilibili/popular`
+
+**描述**: 获取热门视频，支持按标签和时间范围筛选
+
+**查询参数**:
+- `tag` (可选): 标签名称，如"编程"、"音乐"等，不提供则获取全站热门
+- `page` (可选): 页码，默认1
+- `page_size` (可选): 每页数量，默认20，最大50
+- `days` (可选): 时间范围（天数），1=当天，7=本周，30=本月，不提供则不限制时间
+
+**请求示例**:
+```http
+# 获取全站热门视频（不限时间）
+GET /api/v1/bilibili/popular
+
+# 获取当天全站热门视频
+GET /api/v1/bilibili/popular?days=1
+
+# 获取当天"编程"标签的热门视频
+GET /api/v1/bilibili/popular?tag=编程&days=1&page=1&page_size=20
+
+# 获取本周"音乐"标签的热门视频
+GET /api/v1/bilibili/popular?tag=音乐&days=7
+
+# 获取"编程"标签的热门视频（不限时间）
+GET /api/v1/bilibili/popular?tag=编程
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "items": [
+      {
+        "bvid": "BV1xx411c7mD",
+        "aid": 123456789,
+        "title": "Python入门教程",
+        "description": "从零开始学习Python",
+        "pic": "https://i0.hdslb.com/...",
+        "author": "UP主名称",
+        "mid": 987654321,
+        "duration": "10:30",
+        "play": 100000,
+        "pubdate": 1704268800
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "page_size": 20,
+      "total_count": 100,
+      "total_pages": 5
+    }
+  }
+}
+```
+
+---
+
+### 5.2 搜索视频
 
 **接口**: `GET /bilibili/search`
 
@@ -491,7 +552,7 @@ GET /api/v1/bilibili/search?keywords=Python教程&page=1
 
 ---
 
-### 5.2 获取视频详情
+### 5.3 获取视频详情
 
 **接口**: `GET /bilibili/videos/{bvid}`
 
@@ -548,7 +609,7 @@ GET /api/v1/bilibili/videos/BV1xx411c7mD?page=0
 
 ---
 
-### 5.3 获取视频分P列表
+### 5.4 获取视频分P列表
 
 **接口**: `GET /bilibili/videos/{bvid}/pages`
 
@@ -593,7 +654,7 @@ GET /api/v1/bilibili/videos/BV1xx411c7mD/pages
 
 ---
 
-### 5.4 获取视频下载链接
+### 5.5 获取视频下载链接
 
 **接口**: `GET /bilibili/videos/{bvid}/download`
 
